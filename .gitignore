@@ -1,0 +1,20 @@
+# Build output
+build/
+*.apk
+*.dex
+*.class
+obj/
+bin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Keystore
+*.jks
+*.keystore
