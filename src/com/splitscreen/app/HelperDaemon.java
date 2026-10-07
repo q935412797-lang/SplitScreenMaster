@@ -18,7 +18,6 @@ public class HelperDaemon extends Binder {
     private static final String SERVICE_NAME = "splitscreen_helper";
     private static final String INTERFACE_TOKEN = "com.splitscreen.app.IHelper";
 
-    // Transact codes (跟AutoTark HelperBinderProtocol一致)
     private static final int TX_PING = 0x1;
     private static final int TX_CREATE_VIRTUAL_DISPLAY = 0x6;
     private static final int TX_RELEASE_VIRTUAL_DISPLAY = 0x7;
@@ -35,12 +34,11 @@ public class HelperDaemon extends Binder {
 
     public static void main(String[] args) {
         log("========================================");
-        log("分屏大师 HelperDaemon v17.0 (Binder架构)");
+        log("分屏大师 HelperDaemon v17.1 (Binder架构)");
         log("跟AutoTark完全一致: ServiceManager系统服务");
         log("========================================");
 
         try {
-            // 跟AutoTark一致：初始化ActivityThread
             log("初始化ActivityThread...");
             Class<?> looperClass = Class.forName("android.os.Looper");
             looperClass.getMethod("prepare").invoke(null);
@@ -49,13 +47,11 @@ public class HelperDaemon extends Binder {
             appContext = (Context) activityThread.getClass().getMethod("getApplication").invoke(activityThread);
             log("Application Context: " + appContext.getPackageName());
 
-            // 跟AutoTark一致：createPackageContext获取shell Context
             log("创建shell Context...");
             shellContext = appContext.createPackageContext("com.android.shell", 0);
             displayManager = (DisplayManager) shellContext.getSystemService("display");
             log("shell Context + DisplayManager 就绪");
 
-            // 跟AutoTark一致：创建Binder并注册为系统服务
             HelperDaemon daemon = new HelperDaemon();
             log("注册系统服务: " + SERVICE_NAME);
             Class<?> smClass = Class.forName("android.os.ServiceManager");
@@ -63,7 +59,6 @@ public class HelperDaemon extends Binder {
             addService.invoke(null, SERVICE_NAME, daemon);
             log("系统服务注册成功！等待客户端连接...");
 
-            // 跟AutoTark一致：进入Looper循环
             looperClass.getMethod("loop").invoke(null);
 
         } catch (Exception e) {
@@ -118,7 +113,6 @@ public class HelperDaemon extends Binder {
         }
     }
 
-    // 跟AutoTark一致：用DisplayManager.createVirtualDisplay创建虚拟显示
     private boolean handleCreateVirtualDisplay(Parcel data, Parcel reply) {
         try {
             String name = data.readString();
@@ -127,7 +121,6 @@ public class HelperDaemon extends Binder {
             int density = data.readInt();
             int flags = data.readInt();
 
-            // 跟AutoTark一致：从Parcel读取Surface（Surface实现了Parcelable）
             Surface surface = Surface.CREATOR.createFromParcel(data);
 
             log("创建虚拟显示: " + name + " " + width + "x" + height + " density=" + density + " flags=" + flags);
@@ -138,7 +131,6 @@ public class HelperDaemon extends Binder {
                 return true;
             }
 
-            // 跟AutoTark一致：用shell Context的DisplayManager创建
             VirtualDisplay vd = displayManager.createVirtualDisplay(
                     name, width, height, density, surface, flags);
 
@@ -183,20 +175,18 @@ public class HelperDaemon extends Binder {
         }
     }
 
-    // 跟AutoTark一致：force-stop + windowingMode + 重试
     private boolean handleLaunchApp(Parcel data, Parcel reply) {
         try {
             int displayId = data.readInt();
             String packageName = data.readString();
             log("启动应用: " + packageName + " -> display " + displayId);
 
-            // force-stop
             execShell("am force-stop " + packageName);
             Thread.sleep(200);
 
             String cmd = "am start --display " + displayId +
-                    " --windowingMode 1 --activity-multiple-task -f 0x10000000" +
-                    " -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p " + packageName;
+                    " --windowingMode 1 --activity-multiple-task -f 0x10000000 " +
+                    packageName;
 
             String lastResult = "";
             for (int retry = 0; retry < 26; retry++) {
